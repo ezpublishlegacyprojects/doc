@@ -19,7 +19,7 @@ newer version, without having to make those interim-updates.
 As the ez-update-doc states:
 <code>
 Updating an ezpublish 4.0.x to 4.2.x involves
-1. updating to 4.0.4 or 4.0.4 
+1. updating to 4.0.4 or 4.0.7 (the latest 4.0.x release)
 2. updating to 4.1.0
 3. updating to 4.2.0
 </code>
@@ -76,78 +76,75 @@ I will also not cover 'how to execute' the sql-snippets provided below.
 
 2) Prepare the update
 -----------------------
-First update ezcomponents. eZPublish 4.2 needs at least the 2009.x release.
-So get it first if you haven't. Or invoke a update as described below if 
-you have it installed.
-<code>
-pear upgrade ezc/eZComponents
-</code>
-
-Make a backup of your database.
-<code>
-mysqldump -u USERNAME -p NAME-OF-DATABASE > backup.sql
-</code>
-
-Download eZPublish 4.2.0. With or without ezcomponents - that should not
-make any difference. I am using ezpublish without included ezcomponents.
+eZPublish 4.2 needs eZComponents 2009.x
 Please refer to 
 <code>
 http://ezcomponents.org/docs/install
 </code>
 for installation and updating details.
 
+If you plan using the bundled eZComponents version:
+So you've not installed eZComponents before and consider using eZPublish 4.2
+as bundled version including eZComponents 2009.x, then do nothing here.
+You will have the newest eZComponents when downloading the eZPublish 4.2 
+archive. Just remember to download the 'bundled' version afterwards.
+
+If you are using eZComponents installed via Pear:
+If you have installed eZComponents via pear and plan using eZPublish 4.2
+without bundled eZComponents, you should update to a new 
+version as eZPublish 4.2 needs at least the 2009.x release.
+<code>
+pear upgrade ezc/eZComponents
+</code>
+
+
+
+Make a backup of your eZPublish installation.
+<code>
+tar cvzf /home/USERNAME/ezpublish-backup.tar.gz /path/to/ezpublish
+</code>
+
+Make a backup of your database.
+<code>
+mysqldump -u USERNAME -p NAME-OF-DATABASE > /home/USERNAME/backup.sql
+</code>
+
+Download eZPublish 4.2.0. 
+For the sake of simplicity, i will continue using ezpublish without bundled 
+eZComponents. 
+
 I will use the ezpublish-4.2.0-full package, including all the nice new 
-and shiny extensions like multiupload, survey, password-expiry, ezfind 2.1.
+and shiny extensions like multiupload, survey, password-expiry, ezfind 2.1,
+but without the bundled eZComponents.
 
 Go to
 <code>
-http://ez.no/download/download_feedback/ezpublish_4_2_0_full_gpl_tar_gz
+http://ez.no/download
 </code>
-and download this release. It's about 22MB in size.
+and grab your desired version. Download sizes may vary.
+
+
 Extract the downloaded archive over your existing installation, replace 
-any existing files that might exist.
+any existing files that might exist. 
 
-Alternatively you might extract the downloaded archive into a new/empty 
-directory and afterwards copy/move your configurations, designs and extensions
-from the existing ezpublish installation over to the newly created ezpublish
-directory.
+Take care for your settings/override and setting/siteaccess folders. Some files
+might be overwritten by the extracted package.
 
-In both cases, take care on what you are doing. It's up to you.
-
-Cleanup the folder /settings/siteaccess by
-- removing setup folder
-- editing admin/site.ini.append.php to reflect the default working settings:
+You should remove the file 
 <code>
-[SiteSettings]
-DefaultPage=/content/view/full/2
-LoginPage=custom
-
-[SiteAccessSettings]
-RequireUserLogin=true
-ShowHiddenNodes=true
-
-[DesignSettings]
-SiteDesign=admin
-
-[ContentSettings]
-CachedViewPreferences[full]=admin_navigation_states=0;admin_navigation_content=0;admin_navigation_details=0;admin_navigation_languages=0;admin_navigation_locations=0;admin_navigation_relations=0;admin_navigation_roles=0;admin_navigation_policies=0;admin_navigation_content=0;admin_navigation_translations=0;admin_children_viewmode=list;admin_list_limit=1;admin_edit_show_locations=0;admin_leftmenu_width=10;admin_url_list_limit=10;admin_url_view_limit=10;admin_section_list_limit=1;admin_orderlist_sortfield=user_name;admin_orderlist_sortorder=desc;admin_search_stats_limit=1;admin_treemenu=1;admin_bookmarkmenu=1;admin_left_menu_width=13
-
-[RegionalSettings]
-Locale=ger-DE
-ContentObjectLocale=ger-DE
-ShowUntranslatedObjects=enabled
-SiteLanguageList[]
-SiteLanguageList[]=ger-DE
-TextTranslation=enabled
-</code>
-Teh important things here are:  showhiddennodes, regionalsettings, showuntranslatedobjects.
-The site-ini has been overwritten/replaced by the default ez-package during extraction.
-
-Also remove the file 
-<code>/autoload/ezp_extension.php
+/autoload/ezp_extension.php
 </code>
 as there will be a new place for this file under /var/autoload/.
-This new folder/file will be create automatically later on.
+This new folder/file will be created automatically later on.
+
+
+Alternatively you can extract the downloaded archive into a new/empty 
+directory and afterwards copy/move your configurations, designs and extensions
+from the existing ezpublish installation over to the newly created ezpublish
+directory. This is the cleaner way of updating your ezpublish.
+
+
+In both cases, take care on what you are doing. It's up to you.
 
 
 
@@ -158,7 +155,7 @@ This new folder/file will be create automatically later on.
 The following sql-statements are ripped off the default update scripts provided
 by ez in their corresponding ez-release. This is just a nice round-up and 
 concatenation of those scripts. Of course I checked every statement before 
-executing. you should do so as well.
+executing. You should do so as well.
 
 When adding indexes or altering tables, make sure the 'to be added' index or 
 table does not already exist. I was using 
@@ -270,15 +267,16 @@ Clear the cache
 php bin/php/ezcache.php --clear-all
 </code>
 
-Create the autoloads (kernel and extensions)
+Create the autoload-files (kernel and extensions)
 <code>
 php bin/php/ezpgenerateautoloads.php
 </code>
 
 
+
 Run the system update-scripts. First the ones for 4.1, then those for 4.2.
 
-Creating locked states, part of the object states functionality.
+Create locked states, part of the object states functionality.
 <code>
 php update/common/scripts/4.1/addlockstategroup.php
 </code>
