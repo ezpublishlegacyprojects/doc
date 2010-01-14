@@ -281,6 +281,12 @@ Create locked states, part of the object states functionality.
 php update/common/scripts/4.1/addlockstategroup.php
 </code>
 
+Convert "custom:align" attributes to align attribute on supported tags.
+Set missing align attribute on <embed> and <embed-inline> to align=right.
+<code>
+php update/common/scripts/4.1/correctxmlalign.php
+</code>
+
 Fix remote ids of classes.
 <code>
 php update/common/scripts/4.1/fixclassremoteid.php
@@ -292,9 +298,10 @@ ezurl_object_table for all versions/translations.
 php update/common/scripts/4.1/fixezurlobjectlinks.php
 </code>
 
-Fix non-unique usage of content object remote ID's.
+Fix non-unique usage of content-object and node remote-ID's.
 <code>
 php update/common/scripts/4.1/fixobjectremoteid.php
+php update/common/scripts/4.1/fixnoderemoteid.php
 </code>
 
 Initialize the ezurlalias_ml_incr table, part of the fixed issue #14077.
