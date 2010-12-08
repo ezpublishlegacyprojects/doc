@@ -1,0 +1,435 @@
+this is early beta, but seems to work on my dev-system. QA is on it ans testing like hell.
+svn will be updated if finished.
+
+-----------------------------------------------------------------------------------------------
+
+
+
+
+Updating ezpublish directly from 4.0.1 to 4.4.0
+-------------------------------------------------
+The following article will describe the DIRECT update of ezpublish 
+from 4.0.1 to 4.4.0.
+
+0) Intention
+1) Introduction
+2) Prepare the update
+3) Update
+4) Optional: Install new 4.4-extensions
+
+
+
+0) Intention
+---------------------------
+I wanted to be able to update a bunch of my customers ezpublish's to a
+newer version, without having to make those interim-updates.
+
+As the ez-update-doc states:
+<code>
+Updating an ezpublish 4.0.x to 4.4.x involves
+1. updating to 4.0.4 or 4.0.7 (the latest 4.0.x release)
+2. updating to 4.1.0
+3. updating to 4.2.0
+4. updating to 4.3.0
+5. updating to 4.4.0
+</code>
+I don't want to do this that way. This how-to is a pure time-saver.
+
+
+
+
+1) Introduction
+----------------------------
+EZ provides an incremental upgrade procedure which includes
+1. update from 4.0.1 to 4.0.4
+2. update from 4.0.4 to 4.1.0
+3. update from 4.1.0 to 4.2.0
+3. update from 4.2.0 to 4.3.0
+3. update from 4.3.0 to 4.4.0
+You can find this procedures here: 
+<code>
+http://ez.no/doc/ez_publish/upgrading
+</code>
+
+I found a lot of questions on how to update directly, also found a few basic
+explanations and a lot 'read the manuals' answers... 
+
+If somewhere already exists a update-procedure like this one:
+It was not my intention to 'copy' such a manual. I definitely did not found
+any 'direct update guide from 4.0.1 to 4.4.0' so I wrote this thingy here.
+
+I will only cover updating the core-files, database and steps running 
+necessary update scripts. Please be advised, that it may be necessary to 
+upgrade your home-grown extensions as they may not work with 4.1 / 4.2.x / 4.3.x any more.
+Please refer to the ezpublish upgrade-pages for details on why/how/what to do in
+such a case.
+
+I cannot and will not be made responsible for any damages that might be occur when 
+your data might being destroyed. I checked the following how to carefully
+and it worked flawlessly on my host and with my ezpublish.
+
+The how-to may not work with any other versions of ezpublish. I have only tested 
+it with
+- from: 4.0.1
+- to: 4.4.0
+not more, not less. Upgrading an old 3.9.x to 4.4.0 using this how to will not work!
+On the other hand, upgrading from an 4.0.3 to 4.4.0 might work...
+
+A dumb copy/paste of the following lines/code without any substantially 
+knowledge of sql/ssh/bash/server will not lead to success.
+I will not explain the basic functionality of databases, a shell 
+nor will I explain the usage of php-shell-scripts used widely in ezpublish.
+I will also not cover 'how to execute' the sql-snippets provided below.
+
+
+
+
+
+
+2) Prepare the update
+-----------------------
+eZPublish 4.4 needs eZComponents 2009.x
+Please refer to 
+<code>
+http://ezcomponents.org/docs/install
+</code>
+for installation and updating details.
+
+If you plan using the bundled eZComponents version:
+So you've not installed eZComponents before and consider using eZPublish 4.4
+as bundled version including eZComponents 2009.x, then do nothing here.
+You will have the newest eZComponents when downloading the eZPublish 4.4 
+archive. Just remember to download the 'bundled' version afterwards.
+
+If you are using eZComponents installed via Pear:
+If you have installed eZComponents via pear and plan using eZPublish 4.4
+without bundled eZComponents, you should update to a new 
+version as eZPublish 4.4 needs at least the 2009.x release.
+<code>
+pear upgrade ezc/eZComponents
+</code>
+
+
+
+Make a backup of your eZPublish installation.
+<code>
+tar cvzf /home/USERNAME/ezpublish-backup.tar.gz /path/to/ezpublish
+</code>
+
+Make a backup of your database.
+<code>
+mysqldump -u USERNAME -p NAME-OF-DATABASE > /home/USERNAME/backup.sql
+</code>
+
+Download eZPublish 4.4.0. 
+For the sake of simplicity, i will continue using ezpublish without bundled 
+eZComponents. 
+
+I will use the ezpublish-4.4.0-full package, including all the nice new 
+and shiny extensions like multiupload, survey, password-expiry,
+but without the bundled eZComponents.
+
+Go to
+<code>
+http://ez.no/download
+</code>
+and grab your desired version. Download sizes may vary.
+
+
+Extract the downloaded archive over your existing installation, replace 
+any existing files that might exist. 
+
+Take care for your settings/override and setting/siteaccess folders. Some files
+might be overwritten by the extracted package.
+
+You should remove the file 
+<code>
+/autoload/ezp_extension.php
+</code>
+as there will be a new place for this file under /var/autoload/.
+This new folder/file will be created automatically later on.
+
+
+Alternatively you can extract the downloaded archive into a new/empty 
+directory and afterwards copy/move your configurations, designs and extensions
+from the existing ezpublish installation over to the newly created ezpublish
+directory. This is the cleaner way of updating your ezpublish.
+
+
+In both cases, take care on what you are doing. It's up to you.
+
+
+
+
+
+3) Update
+---------------------------------------
+The following sql-statements are ripped off the default update scripts provided
+by ez in their corresponding ez-release. This is just a nice round-up and 
+concatenation of those scripts. Of course I checked every statement before 
+executing. You should do so as well.
+
+When adding indexes or altering tables, make sure the 'to be added' index or 
+table does not already exist. I was using 
+<code>
+show create table xxxx;
+</code> 
+for this. Do as you prefer.
+
+<code>
+SET storage_engine=InnoDB;
+
+ALTER TABLE ezrss_export ADD COLUMN node_id INT NULL;
+ALTER TABLE ezrss_export_item ADD COLUMN category VARCHAR( 255 ) NULL;
+
+ALTER TABLE ezgeneral_digest_user_settings ADD UNIQUE INDEX ezgeneral_digest_user_settings_address(address);
+DELETE FROM ezgeneral_digest_user_settings WHERE address not in (SELECT email FROM ezuser);
+
+ALTER TABLE ezbinaryfile MODIFY COLUMN mime_type VARCHAR(255) NOT NULL;
+
+CREATE TABLE ezcobj_state (
+  default_language_id int(11) NOT NULL default '0',
+  group_id int(11) NOT NULL default '0',
+  id int(11) NOT NULL auto_increment,
+  identifier varchar(45) NOT NULL default '',
+  language_mask int(11) NOT NULL default '0',
+  priority int(11) NOT NULL default '0',
+  PRIMARY KEY  (id),
+  UNIQUE KEY ezcobj_state_identifier (group_id,identifier),
+  KEY ezcobj_state_lmask (language_mask),
+  KEY ezcobj_state_priority (priority)
+);
+
+CREATE TABLE ezcobj_state_group (
+  default_language_id int(11) NOT NULL default '0',
+  id int(11) NOT NULL auto_increment,
+  identifier varchar(45) NOT NULL default '',
+  language_mask int(11) NOT NULL default '0',
+  PRIMARY KEY  (id),
+  UNIQUE KEY ezcobj_state_group_identifier (identifier),
+  KEY ezcobj_state_group_lmask (language_mask)
+);
+
+CREATE TABLE ezcobj_state_group_language (
+  contentobject_state_group_id int(11) NOT NULL default '0',
+  description longtext NOT NULL,
+  language_id int(11) NOT NULL default '0',
+  name varchar(45) NOT NULL default '',
+  PRIMARY KEY  (contentobject_state_group_id,language_id)
+);
+
+CREATE TABLE ezcobj_state_language (
+  contentobject_state_id int(11) NOT NULL default '0',
+  description longtext NOT NULL,
+  language_id int(11) NOT NULL default '0',
+  name varchar(45) NOT NULL default '',
+  PRIMARY KEY  (contentobject_state_id,language_id)
+);
+
+CREATE TABLE ezcobj_state_link (
+  contentobject_id int(11) NOT NULL default '0',
+  contentobject_state_id int(11) NOT NULL default '0',
+  PRIMARY KEY  (contentobject_id,contentobject_state_id)
+);
+
+ALTER TABLE ezuservisit ADD COLUMN login_count int(11) NOT NULL default 0;
+ALTER TABLE ezuservisit ADD INDEX ezuservisit_co_visit_count( current_visit_timestamp, login_count );
+
+ALTER TABLE ezforgot_password ADD INDEX ezforgot_password_user(user_id);
+
+ALTER TABLE ezorder_item CHANGE vat_value vat_value FLOAT NOT NULL default 0;
+
+CREATE TABLE ezurlalias_ml_incr (
+  id int(11) NOT NULL auto_increment,
+  PRIMARY KEY  (id)
+);
+
+ALTER TABLE ezsession ADD COLUMN user_hash VARCHAR( 32 ) NOT NULL default '';
+
+ALTER TABLE ezpending_actions ADD COLUMN created int(11) DEFAULT NULL;
+ALTER TABLE ezpending_actions ADD INDEX ezpending_actions_created ( created );
+
+DROP TABLE ezimage;
+DROP TABLE ezimagevariation;
+
+ALTER TABLE ezworkflow_event
+  CHANGE data_text1 data_text1 VARCHAR(255),
+  CHANGE data_text2 data_text2 VARCHAR(255),
+  CHANGE data_text3 data_text3 VARCHAR(255),
+  CHANGE data_text4 data_text4 VARCHAR(255);
+ALTER TABLE ezworkflow_event ADD COLUMN data_text5 LONGTEXT;
+ALTER TABLE ezworkflow_event ADD INDEX wid_version_placement ( workflow_id , version , placement );
+
+CREATE INDEX ezkeyword_attr_link_oaid ON ezkeyword_attribute_link( objectattribute_id );
+
+CREATE INDEX ezinfocollection_co_id_created ON ezinfocollection( contentobject_id, created );
+
+ALTER TABLE ezpolicy_limitation ADD INDEX policy_id ( policy_id );
+
+ALTER TABLE ezuser_accountkey ADD INDEX hash_key ( hash_key );
+
+
+
+
+ALTER TABLE ezrss_export_item ADD COLUMN enclosure VARCHAR( 255 ) NULL;
+ALTER TABLE ezcontentclass ADD COLUMN serialized_description_list longtext NULL;
+ALTER TABLE ezcontentclass_attribute ADD COLUMN serialized_data_text longtext NULL;
+ALTER TABLE ezcontentclass_attribute ADD COLUMN serialized_description_list longtext NULL;
+ALTER TABLE ezcontentclass_attribute ADD COLUMN category VARCHAR( 25 ) NOT NULL default '';
+
+CREATE TABLE ezscheduled_script (
+  id int(11) NOT NULL auto_increment,
+  process_id int(11) NOT NULL default '0',
+  name varchar(50) NOT NULL default '',
+  command varchar(255) NOT NULL default '',
+  last_report_timestamp int(11) NOT NULL default '0',
+  progress int(3) default '0',
+  user_id int(11) NOT NULL default '0',
+  PRIMARY KEY (id),
+  KEY ezscheduled_script_timestamp (last_report_timestamp)
+);
+
+
+
+
+
+
+ALTER TABLE ezcontentobject DROP COLUMN is_published;
+
+ALTER TABLE ezsection ADD identifier VARCHAR(255);
+
+ALTER TABLE ezinfocollection_attribute ADD INDEX ezinfocollection_attr_cca_id ( contentclass_attribute_id );
+ALTER TABLE ezinfocollection_attribute ADD INDEX ezinfocollection_attr_coa_id ( contentobject_attribute_id );
+ALTER TABLE ezinfocollection_attribute ADD INDEX ezinfocollection_attr_ic_id ( informationcollection_id );
+
+ALTER TABLE ezpreferences MODIFY COLUMN value longtext;
+ALTER TABLE ezpolicy ADD original_id INT(11) NOT NULL DEFAULT '0';
+ALTER TABLE ezpolicy ADD INDEX ezpolicy_original_id ( original_id );
+UPDATE ezcontentclass_attribute SET can_translate=0 WHERE data_type_string='ezuser';
+
+
+
+
+
+CREATE TABLE ezfind_elevate_configuration (
+contentobject_id int(11) NOT NULL DEFAULT '0',
+language_code varchar(20) NOT NULL DEFAULT '',
+search_query varchar(255) NOT NULL DEFAULT '',
+PRIMARY KEY ( search_query, contentobject_id, language_code ),
+KEY ezfind_elevate_configuration__search_query ( search_query( 100 ) )
+);
+DROP TABLE ezurlalias_ml_migrate;
+
+
+
+
+
+UPDATE ezsite_data SET value='4.4.0' WHERE name='ezpublish-version';
+UPDATE ezsite_data SET value='1' WHERE name='ezpublish-release';
+</code>
+
+
+
+Clear the cache
+<code>
+php bin/php/ezcache.php --clear-all
+</code>
+
+Create the autoload-files (kernel and extensions)
+<code>
+php bin/php/ezpgenerateautoloads.php
+</code>
+
+
+
+Run the system update-scripts. First the ones for 4.1, then those for 4.2.
+
+Create locked states, part of the object states functionality.
+<code>
+php update/common/scripts/4.1/addlockstategroup.php
+</code>
+
+Convert "custom:align" attributes to align attribute on supported tags.
+Set missing align attribute on <embed> and <embed-inline> to align=right.
+<code>
+php update/common/scripts/4.1/correctxmlalign.php
+</code>
+
+Fix remote ids of classes.
+<code>
+php update/common/scripts/4.1/fixclassremoteid.php
+</code>
+
+Fix older occurrences of link items not being present in the 
+ezurl_object_table for all versions/translations.
+<code>
+php update/common/scripts/4.1/fixezurlobjectlinks.php
+</code>
+
+Fix non-unique usage of content-object and node remote-ID's.
+<code>
+php update/common/scripts/4.1/fixobjectremoteid.php
+php update/common/scripts/4.1/fixnoderemoteid.php
+</code>
+
+Initialize the ezurlalias_ml_incr table, part of the fixed issue #14077.
+<code>
+php update/common/scripts/4.1/initurlaliasmlid.php
+</code>
+
+Delete images from the storage directory that are no longer connected to 
+any content object attribute.
+<code>
+php update/common/scripts/4.2/fixorphanimages.php
+</code>
+
+
+
+
+
+<code>
+php update/common/scripts/4.3/updatenodeassignment.php
+</code>
+
+
+<code>
+php update/common/scripts/4.4/updatesectionidentifier.php
+</code>
+
+
+
+
+
+
+That's it! At this point your eZPublish installation should be
+updated to 4.4.0.
+Your eZPublish files and the database should be in a consistent
+4.4.0 state.
+
+Congratulations.
+
+
+
+
+
+4) Optional: Install new 4.2-extensions
+--------------------------------------------
+As I was upgrading to eZPublish 4.2.0-full, I want to use the new
+shiny extensions. 
+
+Therefore I go into each extension-directory and read the 
+- readme
+- install
+- doc/*
+files and follow the orders written there...
+As mentioned at first, I do not cover further extension-setup here.
+
+Mostly it involves updating the site.ini.append.php in the override-folder,
+followed by regenerating the autoloads.
+Some extensions need new database-tables, so execute the shipped 
+sql-statements within the extensions if needed.
+
+Always keep in mind to 'tail -F ...' the ezpublish error.log-file and 
+watch out for any errors.
+
+
